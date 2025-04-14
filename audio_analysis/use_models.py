@@ -16,18 +16,18 @@ def prepare_features_for_model(df, scaler):
     
     return scaled_features
 
-def predict_gmm(df):
+def predict_gmm(df, verbose=True):
     """
     Predicts whether input features represent RnB or Non-RnB using pre-trained GMM and logistic regression models.
-    
+
     Args:
         df (pd.DataFrame): A dataframe containing feature vectors to classify.
+        verbose (bool): Whether to print diagnostic output.
 
     Returns:
-        dict: A dictionary containing the probabilities, binary predictions, and the final genre.
+        dict: A dictionary containing genre predictions and model outputs.
     """
     # Load the pre-trained models and scaler
-
     gmm_rnb = joblib.load("../models/GMM_data/model_gmm_rnb.joblib")
     gmm_nonrnb = joblib.load("../models/GMM_data/model_gmm_nonrnb.joblib")
     clf = joblib.load("../models/GMM_data/model_logistic_rnb.joblib")
@@ -52,19 +52,26 @@ def predict_gmm(df):
     # Apply the optimal threshold to classify as RnB or non-RnB
     predictions = (probabilities >= best_t).astype(int)
 
-    # Determine the most common genre prediction
-    genre_prediction = "RnB" if Counter(predictions).most_common(1)[0][0] == 1 else "Non-RnB"
-    print(f"🎵 Predicted Genre: {genre_prediction}")
+    # Determine genre from GMM and logistic classifier
+    gmm_genre_prediction = "RnB" if np.mean(ll_rnb) > np.mean(ll_nonrnb) else "Non-RnB"
 
-    confidence = max(np.mean(probabilities), 1 - np.mean(probabilities))
-    print(f"🔍 Confidence Score: {confidence:.4f}")
+    genre_prediction = "RnB" if np.mean(predictions) >= 0.5 else "Non-RnB"
+
+    confidence = float(np.max([np.mean(probabilities), 1 - np.mean(probabilities)]))
+
+    if verbose:
+        print(f"🎵 GMM Genre Prediction: {gmm_genre_prediction}")
+        print(f"🎵 GMM + Logistic Predicted Genre: {genre_prediction}")
+        print(f"🔍 Confidence Score: {confidence:.4f}")
 
     return {
+        "gmm_genre": gmm_genre_prediction,
+        "logistic_genre": genre_prediction,
         "probabilities": probabilities.tolist(),
         "predictions": predictions.tolist(),
-        "genre": genre_prediction,
         "confidence": confidence
     }
+    
 
 # Optional test block
 if __name__ == "__main__":
