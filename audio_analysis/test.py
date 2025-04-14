@@ -11,6 +11,8 @@ import IPython.display as ipd
 from yt_dlp import YoutubeDL
 import os
 import contextlib
+from sklearn.feature_extraction import DictVectorizer
+import extract_json, use_models
 
 @contextlib.contextmanager
 def suppress_output():
@@ -108,6 +110,19 @@ def extract_filtered_features(mp3_path, classifiers_path="../classifiers.txt", o
         json.dump(filtered, f, indent=2)
     print(f"✅ Saved filtered features to: {output_json}")
 
+# Step 5: analyze with model
+def analyze_with_model(features_json):
+    print("\n--- Analyzing Features with Model ---")
+    print(f"🔄 Loading features from JSON: {features_json}")
+    if not os.path.exists(features_json):
+        raise FileNotFoundError(f"Features JSON file does not exist: {features_json}")
+
+    df = extract_json.extract_single_json(features_json)
+
+
+    print("\n--- Analyzing with GMM ---")
+    use_models.predict_gmm(df)
+
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
@@ -124,13 +139,31 @@ def main():
     # Ensure the MP3 file exists before proceeding
     try:
         print(f"🔄 Processing MP3 file: {mp3_path}")
-        extract_filtered_features(mp3_path)
-        return 
+        extract_filtered_features(mp3_path) 
     
     except FileNotFoundError:
         print(f"❌ Error: File '{mp3_path}' not found.")
     except Exception as e:
         print(f"❌ An error occurred: {e}")
+
+    # Analyze the extracted features with the model
+    features_json = "features.json"
+    try:
+        analyze_with_model(features_json)
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+    except Exception as e:
+        print(f"❌ An error occurred during analysis: {e}")
+
+    # Clean up temporary files
+    try:
+        if os.path.exists("temp.wav"):
+            os.remove("temp.wav")
+        if os.path.exists("features.json"):
+            os.remove("features.json")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not delete temporary files: {e}")
+    
 
 if __name__ == "__main__":
     main()
