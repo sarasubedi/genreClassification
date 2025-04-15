@@ -21,124 +21,123 @@ def GMM_extract_labels(data):
     try:
         add_feature_list(data['lowlevel']['mfcc']['mean'], "mfcc")
     except KeyError:
-        print("Missing: mfcc")
+        pass
 
     try:
         add_feature_list(data['lowlevel']['gfcc']['mean'], "gfcc")
     except KeyError:
-        print("Missing: gfcc")
+        pass
 
     try:
         add_feature(data['lowlevel']['hfc']['mean'], "hfc")
     except KeyError:
-        print("Missing: hfc")
+        pass
 
     try:
         add_feature(data['tonal']['chords_changes_rate'], "chords_changes_rate")
     except KeyError:
-        print("Missing: chords_changes_rate")
+        pass
 
     try:
         scale = data['tonal'].get('key_scale', 'major')
         add_feature(1 if scale == 'minor' else 0, "key_scale")
     except KeyError:
-        print("Missing: key_scale (defaulted to major)")
         add_feature(0, "key_scale")
 
     try:
         add_feature(data['lowlevel']['pitch_salience']['mean'], "pitch_salience")
     except KeyError:
-        print("Missing: pitch_salience")
+        pass
 
     try:
         add_feature(data['lowlevel']['dissonance']['mean'], "dissonance")
     except KeyError:
-        print("Missing: dissonance")
+        pass
 
     try:
         add_feature(data['rhythm']['bpm'], "bpm")
     except KeyError:
-        print("Missing: bpm")
+        pass
 
     try:
         add_feature(data['rhythm']['onset_rate'], "onset_rate")
     except KeyError:
-        print("Missing: onset_rate")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_centroid']['mean'], "spectral_centroid")
     except KeyError:
-        print("Missing: spectral_centroid")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_complexity']['mean'], "spectral_complexity")
     except KeyError:
-        print("Missing: spectral_complexity")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_rolloff']['mean'], "spectral_rolloff")
     except KeyError:
-        print("Missing: spectral_rolloff")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_flux']['mean'], "spectral_flux")
     except KeyError:
-        print("Missing: spectral_flux")
+        pass
 
     try:
         add_feature(data['lowlevel']['zerocrossingrate']['mean'], "zerocrossingrate")
     except KeyError:
-        print("Missing: zerocrossingrate")
+        pass
 
     try:
         add_feature_list(data['lowlevel']['spectral_contrast_coeffs']['mean'], "spectral_contrast")
     except KeyError:
-        print("Missing: spectral_contrast_coeffs")
+        pass
 
     try:
         add_feature(data['lowlevel']['average_loudness'], "average_loudness")
     except KeyError:
-        print("Missing: average_loudness")
+        pass
 
     try:
         add_feature(data['lowlevel']['dynamic_complexity'], "dynamic_complexity")
     except KeyError:
-        print("Missing: dynamic_complexity")
+        pass
 
     try:
         add_feature(data['rhythm']['beats_loudness']['mean'], "beats_loudness")
     except KeyError:
-        print("Missing: beats_loudness")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_energyband_low']['mean'], "spectral_energyband_low")
     except KeyError:
-        print("Missing: spectral_energyband_low")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_energyband_high']['mean'], "spectral_energyband_high")
     except KeyError:
-        print("Missing: spectral_energyband_high")
+        pass
 
     try:
         add_feature(data['tonal']['hpcp_entropy']['mean'], "hpcp_entropy")
     except KeyError:
-        print("Missing: hpcp_entropy")
+        pass
 
     try:
         add_feature(data['tonal']['key_strength'], "key_strength")
     except KeyError:
-        print("Missing: key_strength")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_entropy']['mean'], "spectral_entropy")
     except KeyError:
-        print("Missing: spectral_entropy")
+        pass
 
     try:
         add_feature(data['lowlevel']['spectral_strongpeak']['mean'], "spectral_strongpeak")
     except KeyError:
-        print("Missing: spectral_strongpeak")
+        pass
 
     return features, labels
 
@@ -264,19 +263,50 @@ def SVM(full_path):
 
     df =  pd.DataFrame([entry])
 
-    # Load the saved OneHotEncoder
-    encoder_path = "../models/SVMdata/onehot_encoder.pkl"
-    encoder = joblib.load(encoder_path)
+    key_key_dict = {
+        "A": "key_key_A", 
+        "A#": "key_key_A#", 
+        "B": "key_key_B", 
+        "C": "key_key_C", 
+        "C#": "key_key_C#", 
+        "D": "key_key_D", 
+        "D#": "key_key_D#", 
+        "E": "key_key_E", 
+        "F": "key_key_F", 
+        "F#": "key_key_F#", 
+        "G": "key_key_G", 
+        "G#": "key_key_G#"
+    }
 
+    key_chords_dict = {
+        "A": 'chords_key_A',
+        "A#": 'chords_key_A#',
+        "B": 'chords_key_B',
+        "C": 'chords_key_C',
+        "C#": 'chords_key_C#',
+        "D": 'chords_key_D',
+        "D#": 'chords_key_D#',
+        "E": 'chords_key_E',
+        "F": 'chords_key_F',
+        "F#": 'chords_key_F#',
+        "G": 'chords_key_G'
+    }
 
-    # Apply encoder to expected columns
-    categorical_cols = ['key_key', 'key_scale', 'chords_key', 'chords_scale']
-    encoded = encoder.transform(df[categorical_cols])
-    encoded_df = pd.DataFrame(encoded, columns=encoder.get_feature_names_out(categorical_cols))
+    # Manually encode categorical features
+    for key, col_name in key_key_dict.items():
+        df[col_name] = (df['key_key'] == key).astype(int)
 
-    # Drop the object columns (if you did that)
-    dropCols = ['genre', 'is_rnb', 'key_key', 'key_scale', 'chords_key', 'chords_scale']
-    result = encoded_df.drop(columns=dropCols)
+    for key, col_name in key_chords_dict.items():
+        df[col_name] = (df['chords_key'] == key).astype(int)
+
+    df['key_scale_major'] = (df['key_scale'] == 'major').astype(int)
+    df['key_scale_minor'] = (df['key_scale'] == 'minor').astype(int)
+
+    df['chords_scale_major'] = (df['chords_scale'] == 'major').astype(int)
+    df['chords_scale_minor'] = (df['chords_scale'] == 'minor').astype(int)
+
+    dropCols = ['genre', 'key_key', 'key_scale', 'chords_key', 'chords_scale']
+    result = df.drop(columns=dropCols)
 
     return result
 
@@ -284,3 +314,5 @@ def SVM(full_path):
 if __name__ == "__main__":
     json_path = "features.json" 
     result_df = SVM(json_path)
+
+    print(result_df.shape)
