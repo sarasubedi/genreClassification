@@ -2,22 +2,36 @@ import joblib
 import numpy as np
 import pandas as pd
 import preprocess
+# import warnings
+# warnings.filterwarnings("ignore", category=UserWarning)
 
-def prepare_features_for_model(df, scaler):
-    # Ensure the dataframe contains only the columns expected by the scaler
+def preprocess_gmm(df, scaler):
     expected_columns = scaler.feature_names_in_
     df = df[[col for col in expected_columns if col in df.columns]]
 
     for col in expected_columns:
         if col not in df.columns:
-            df[col] = 0
+            df.loc[:, col] = 0
 
     df = df[expected_columns]
     scaled_features = scaler.transform(df)
     
     return scaled_features
 
+def preprocess_svm(df, scaler):
+    expected_columns = scaler.feature_names_in_
+    df = df[[col for col in expected_columns if col in df.columns]]
+    df = df.copy()
+
+    for col in expected_columns:
+        if col not in df.columns:
+            df.loc[:, col] = 0
+
+    df = df[expected_columns]
+    df = df.fillna(0)  # Replace NaN values with 0
+    scaled_features = scaler.transform(df)
     
+    return scaled_features
 
 def predict_gmm(df, verbose=True):
     """
@@ -38,7 +52,7 @@ def predict_gmm(df, verbose=True):
     best_t = joblib.load("../models/GMM_data/optimal_threshold.joblib")
 
     # Scale the features using the new function
-    scaled_features = prepare_features_for_model(df, scaler)
+    scaled_features = preprocess_gmm(df, scaler)
 
     # Compute GMM log-likelihood features
     ll_rnb = gmm_rnb.score_samples(scaled_features)
@@ -57,27 +71,37 @@ def predict_gmm(df, verbose=True):
 
     # Determine genre from GMM and logistic classifier
     gmm_genre_prediction = "RnB" if np.mean(ll_rnb) > np.mean(ll_nonrnb) else "Non-RnB"
+    gmm_confience = np.mean(ll_rnb) - np.mean(ll_nonrnb)
 
     genre_prediction = "RnB" if np.mean(predictions) >= 0.5 else "Non-RnB"
-
-    confidence = float(np.max([np.mean(probabilities), 1 - np.mean(probabilities)]))
+    gl_confidence = float(np.max([np.mean(probabilities), 1 - np.mean(probabilities)]))
 
     if verbose:
         print(f"🎵 GMM Genre Prediction: {gmm_genre_prediction}")
+        print(f"🔍 Confidence Score: {gmm_confience:.4f}\n")
+
         print(f"🎵 GMM + Logistic Predicted Genre: {genre_prediction}")
-        print(f"🔍 Confidence Score: {confidence:.4f}")
+        print(f"🔍 Confidence Score: {gl_confidence:.4f}\n")
 
     return {
         "gmm_genre": gmm_genre_prediction,
         "logistic_genre": genre_prediction,
         "probabilities": probabilities.tolist(),
         "predictions": predictions.tolist(),
-        "confidence": confidence
+        "confidence": (gmm_confience, gl_confidence)
     }
 
+def predict_svm(df, verbose=True):
+    """
+    Predicts genre using multiple pre-trained SVM models with different kernels.
 
-def predict_svm(df):
-    
+    Args:
+        df (pd.DataFrame): Feature dataframe.
+        verbose (bool): Whether to print diagnostic output.
+
+    Returns:
+        dict: Dictionary with predictions, confidence scores, and genre results for each kernel.
+    """
     model_paths = {
         "linear": "../models/SVMdata/linear_kernal_model.pkl",
         "poly": "../models/SVMdata/poly_kernal_model.pkl",
@@ -87,36 +111,34 @@ def predict_svm(df):
 
     # Load scaler
     scaler = joblib.load("../models/SVMdata/scaler.pkl")
+    scaled_features = preprocess_svm(df, scaler)
 
     results = {}
 
     for kernel, path in model_paths.items():
-        # Load the SVM model
-        model = joblib.load(path)
+        try:
+            model = joblib.load(path)
+            prediction = model.predict(scaled_features)
+            decision_scores = model.decision_function(scaled_features)
 
-        # Prepare features for the model
-        scaled_features = prepare_features_for_model(df, scaler)
+            genre_prediction = "RnB" if prediction[0] == 1 else "Non-RnB"
+            confidence = float(np.max([decision_scores[0], -decision_scores[0]]))
 
-        # Make predictions
-        predictions = model.predict(scaled_features)
-        probabilities = model.predict_proba(scaled_features)[:, 1] if hasattr(model, "predict_proba") else None
+            if verbose:
+                print(f"🎧 SVM ({kernel}) Prediction: {genre_prediction}")
+                print(f"📏 Distance from Decision Boundary: {confidence:.4f}\n")
 
-        # Print the prediction
-        print(f"Kernel: {kernel}")
-        print(f"Predictions: {predictions}")
-        if probabilities is not None:
-            print(f"Probabilities: {probabilities}")
-
-        # Store results
-        results[kernel] = {
-            "predictions": predictions.tolist(),
-            "probabilities": probabilities.tolist() if probabilities is not None else None
-        }
+            results[kernel] = {
+                "svm_genre": genre_prediction,
+                "svm_prediction": int(prediction[0]),
+                "decision_score": float(decision_scores[0]),
+                "confidence": confidence
+            }
+        except Exception as e:
+            results[kernel] = {"error": str(e)}
 
     return results
 
-
 if __name__ == "__main__":
-    df = preprocess.SVM("features.json")
-    results = predict_svm(df)
-   
+    df = preprocess.GMM("features.json")
+    results = predict_gmm(df)

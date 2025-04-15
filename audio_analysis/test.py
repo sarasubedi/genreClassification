@@ -117,11 +117,16 @@ def analyze_with_model(features_json):
     if not os.path.exists(features_json):
         raise FileNotFoundError(f"Features JSON file does not exist: {features_json}")
 
-    df = preprocess.GMM(features_json)
-
 
     print("\n--- Analyzing with GMM ---")
+    df = preprocess.GMM(features_json)
     use_models.predict_gmm(df)
+
+    print("\n--- Analyzing with SVM ---")
+    df = preprocess.SVM(features_json)
+    use_models.predict_svm(df)
+
+
 
 def main():
     if len(sys.argv) < 2:
@@ -155,14 +160,14 @@ def main():
     except Exception as e:
         print(f"❌ An error occurred during analysis: {e}")
 
-    # # Clean up temporary files
-    # try:
-    #     if os.path.exists("temp.wav"):
-    #         os.remove("temp.wav")
-    #     if os.path.exists("features.json"):
-    #         os.remove("features.json")
-    # except Exception as e:
-    #     print(f"⚠️ Warning: Could not delete temporary files: {e}")
+    # Clean up temporary files
+    try:
+        if os.path.exists("temp.wav"):
+            os.remove("temp.wav")
+        if os.path.exists("features.json"):
+            os.remove("features.json")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not delete temporary files: {e}")
     
 
 if __name__ == "__main__":
