@@ -1,9 +1,10 @@
 import joblib
 import numpy as np
-from collections import Counter
-
+import pandas as pd
+import preprocess
 
 def prepare_features_for_model(df, scaler):
+    # Ensure the dataframe contains only the columns expected by the scaler
     expected_columns = scaler.feature_names_in_
     df = df[[col for col in expected_columns if col in df.columns]]
 
@@ -15,6 +16,8 @@ def prepare_features_for_model(df, scaler):
     scaled_features = scaler.transform(df)
     
     return scaled_features
+
+    
 
 def predict_gmm(df, verbose=True):
     """
@@ -71,12 +74,49 @@ def predict_gmm(df, verbose=True):
         "predictions": predictions.tolist(),
         "confidence": confidence
     }
-    
 
-# Optional test block
+
+def predict_svm(df):
+    
+    model_paths = {
+        "linear": "../models/SVMdata/linear_kernal_model.pkl",
+        "poly": "../models/SVMdata/poly_kernal_model.pkl",
+        "rbf": "../models/SVMdata/rbf_kernal_model.pkl",
+        "sigmoid": "../models/SVMdata/sigmoid_kernal_model.pkl"
+    }
+
+    # Load scaler
+    scaler = joblib.load("../models/SVMdata/scaler.pkl")
+
+    results = {}
+
+    for kernel, path in model_paths.items():
+        # Load the SVM model
+        model = joblib.load(path)
+
+        # Prepare features for the model
+        scaled_features = prepare_features_for_model(df, scaler)
+
+        # Make predictions
+        predictions = model.predict(scaled_features)
+        probabilities = model.predict_proba(scaled_features)[:, 1] if hasattr(model, "predict_proba") else None
+
+        # Print the prediction
+        print(f"Kernel: {kernel}")
+        print(f"Predictions: {predictions}")
+        if probabilities is not None:
+            print(f"Probabilities: {probabilities}")
+
+        # Store results
+        results[kernel] = {
+            "predictions": predictions.tolist(),
+            "probabilities": probabilities.tolist() if probabilities is not None else None
+        }
+
+    return results
+
+
 if __name__ == "__main__":
-    import pandas as pd
-    print("🔍 Running example with dummy input")
-    dummy_df = pd.DataFrame([[0] * 53])  # Adjust column count as needed
-    result = predict_gmm(dummy_df)
-    print(result)
+    df = preprocess.SVM("features.json")
+    results = predict_svm(df)
+   

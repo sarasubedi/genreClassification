@@ -12,7 +12,7 @@ from yt_dlp import YoutubeDL
 import os
 import contextlib
 from sklearn.feature_extraction import DictVectorizer
-import extract_json, use_models
+import preprocess, use_models
 
 @contextlib.contextmanager
 def suppress_output():
@@ -117,7 +117,7 @@ def analyze_with_model(features_json):
     if not os.path.exists(features_json):
         raise FileNotFoundError(f"Features JSON file does not exist: {features_json}")
 
-    df = extract_json.extract_single_json(features_json)
+    df = preprocess.GMM(features_json)
 
 
     print("\n--- Analyzing with GMM ---")
@@ -155,14 +155,14 @@ def main():
     except Exception as e:
         print(f"❌ An error occurred during analysis: {e}")
 
-    # Clean up temporary files
-    try:
-        if os.path.exists("temp.wav"):
-            os.remove("temp.wav")
-        if os.path.exists("features.json"):
-            os.remove("features.json")
-    except Exception as e:
-        print(f"⚠️ Warning: Could not delete temporary files: {e}")
+    # # Clean up temporary files
+    # try:
+    #     if os.path.exists("temp.wav"):
+    #         os.remove("temp.wav")
+    #     if os.path.exists("features.json"):
+    #         os.remove("features.json")
+    # except Exception as e:
+    #     print(f"⚠️ Warning: Could not delete temporary files: {e}")
     
 
 if __name__ == "__main__":
