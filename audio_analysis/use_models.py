@@ -106,6 +106,7 @@ def predict_svm(df, verbose=True):
         "linear": "../models/SVMdata/linear_kernal_model.pkl",
         "poly": "../models/SVMdata/poly_kernal_model.pkl",
         "rbf": "../models/SVMdata/rbf_kernal_model.pkl",
+        "rbf low gamma": "../models/SVMdata/rbf_modGamma_kernal_model.pkl",
         "sigmoid": "../models/SVMdata/sigmoid_kernal_model.pkl"
     }
 
