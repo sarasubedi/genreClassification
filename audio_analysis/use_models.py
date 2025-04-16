@@ -135,6 +135,7 @@ def predict_svm(df, verbose=True):
                 "confidence": confidence
             }
         except Exception as e:
+            print(f"⚠️ Error with {kernel} model: {e}")
             results[kernel] = {"error": str(e)}
 
     return results
