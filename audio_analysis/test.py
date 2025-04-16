@@ -43,6 +43,10 @@ def download_mp3(url, output_name="song"):
     with suppress_output():
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
+            global video_title
+            video_info = ydl.extract_info(url, download=False)
+            video_title = video_info.get('title', 'Unknown Title')
+    
     print(f"✅ MP3 downloaded and saved as: {output_name}.mp3")
 
 # Step 1: Convert MP3 to WAV
@@ -117,7 +121,9 @@ def analyze_with_model(features_json):
     if not os.path.exists(features_json):
         raise FileNotFoundError(f"Features JSON file does not exist: {features_json}")
 
-
+    if 'video_title' in globals():
+        print(f"\n--- RESULTS {video_title} ---")
+ 
     print("\n--- Analyzing with GMM ---")
     df = preprocess.GMM(features_json)
     use_models.predict_gmm(df)
